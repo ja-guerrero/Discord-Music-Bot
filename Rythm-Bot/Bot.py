@@ -1,20 +1,24 @@
 import os
 import asyncio 
 import discord
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from discord.ext import commands
-from youtube_dl import YoutubeDL as ytdl
 import re,requests,subprocess,urllib.parse,urllib.request
 from bs4 import BeautifulSoup
+import pafy
+FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn'}
 
-import moviepy.editor as mp
 
-load_dotenv()
 
-TOKEN = os.getenv('DISCORD_TOKEN')
 
+#load_dotenv()
+
+#TOKEN = os.getenv('ODkxODAwMTE2OTgwMjI4MTU2.YVDnlA.WPnq8XkOjalTwtFQHmKI2fFzNhk')
+TOKEN = "ODkxODAwMTE2OTgwMjI4MTU2.YVDnlA.WPnq8XkOjalTwtFQHmKI2fFzNhk"
 
 bot = commands.Bot(command_prefix='!') 
+
+que = []
 
 def get_audio(name):
 
@@ -29,21 +33,44 @@ def get_audio(name):
 	
 	return clip2
 
+def play_next(ctx, source):
+    if len(que) >= 1:
+        que.remove(que[0])
+        vc = ctx.message.guild.voice_client
+        vc.play(discord.FFmpegPCMAudio(source=source), after=lambda e: play_next(ctx,que[0]))
+        asyncio.run_coroutine_threadsafe(vc.disconnect(ctx), self.bot.loop)
+        asyncio.run_coroutine_threadsafe(ctx.send("No more songs in queue."))
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} is connected to the following guild:\n')
 
 @bot.command()
 async def play(ctx,url):
-	streamer = ytdl({'format_id':'audio-low','ext':'webm','vcodec':'none'})
-	link =streamer.extract_info(url,download=False)["formats"][0]["url"]
 
 	chann = ctx.author.voice.channel 
-#
-	client = await chann.connect(timeout=0.5)
-	audio =  discord.FFmpegPCMAudio(link,args=["-vn","-acodec"])
-	client.play(audio)
+	client = ctx.message.guild.voice_client
+	if client == None:
+		client = await chann.connect(timeout=1) 
+		
 	
+	song = pafy.new(url)
+
+	source = song.getbestaudio()
+
+	que.append(source.url)
+
+
+	if not client.is_playing():
+		client.play(discord.FFmpegPCMAudio(source=source.url), after=lambda e: play_next(ctx,url))
+	
+
+@bot.command()
+async def pause(ctx):
+	server = ctx.message.guild
+	audio = server.voice_client
+	audio.pause()
+
 
 
 bot.run(TOKEN)
