@@ -3,7 +3,7 @@ import time
 from asyncio import sleep
 import asyncio 
 import discord
-#from dotenv import load_dotenv
+from dotenv import load_dotenv
 from discord.ext import commands
 import re,requests,subprocess,urllib.parse,urllib.request
 from bs4 import BeautifulSoup
@@ -13,10 +13,10 @@ FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconne
 
 
 
-#load_dotenv()
+load_dotenv()
 
-#TOKEN = os.getenv('ODkxODAwMTE2OTgwMjI4MTU2.YVDnlA.WPnq8XkOjalTwtFQHmKI2fFzNhk')
-TOKEN = "ODkxODAwMTE2OTgwMjI4MTU2.YVDnlA.WPnq8XkOjalTwtFQHmKI2fFzNhk"
+TOKEN = os.getenv('DISCORD_TOKEN')
+
 
 intents = discord.Intents.default()
 intents.members = True
@@ -74,10 +74,10 @@ def play_next(ctx, source):
 async def on_ready():
     print(f'{bot.user} is connected to the following guild:\n')
     guilds = await bot.fetch_guilds(limit=150).flatten()
-    guild = bot.get_guild(431948594023759874)
+    guild = bot.get_guild(801537999010791454)
     print(guilds)
-    member = guild.get_member(642375047411007519)
-    await member.edit(nick="IM A FAGGOT")
+    member = guild.get_member(443165085657989161)
+    await member.edit(nick="OFFICIAL FAGGOT")
 
 
 @bot.command()
@@ -216,12 +216,12 @@ async def kc(ctx):
 
 @bot.event
 async def on_member_update(before, after):
-    if before.id == 642375047411007519:
-        if str(after.nick) != "IM A  FAGGOT":
+    if before.id == 443165085657989161:
+        if str(after.nick) != "OFFICIAL FAGGOT":
             # also would be able to get the guild via after.guild or before.guild
-            guild = bot.get_guild(431948594023759874)
+            guild = bot.get_guild(801537999010791454)
             member = guild.get_member(after.id)
-            await member.edit(nick="IM A FAGGOT")
+            await member.edit(nick="OFFICIAL FAGGOT")
 
 
 
