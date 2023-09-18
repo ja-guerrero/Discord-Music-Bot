@@ -3,9 +3,9 @@ from discord.ext import commands
 import asyncio
 import os
 from dotenv import load_dotenv
-from youtube_dl import YoutubeDL
+import yt_dlp
 load_dotenv()
-from Spotify_API import Spotify_API
+
 
 
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn'}
@@ -15,6 +15,7 @@ class Bot:
     def __init__(self):
         intents = discord.Intents.default()
         intents.members = True
+        intents.message_content = True
 
         self.bot = commands.Bot(command_prefix="!", intents=intents)
         self.Token = os.getenv("DISCORD_TOKEN")
@@ -28,11 +29,19 @@ class Bot:
 
         
     def get_src(self,url):
-        ydl = YoutubeDL({'format': 'bestaudio/best'})
-        with ydl:
-            result = ydl.extract_info(url, download=False)
-        src = result
-        return(src['formats'][0]['url'])
+        ydl_opts = {
+            'format': 'm4a/bestaudio/best',
+            # ℹ️ See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
+            'postprocessors': [{  # Extract audio using ffmpeg
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'm4a',
+        }]}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            url = ydl.sanitize_info(info)["formats"][5]["url"]
+            title =  ydl.sanitize_info(info)["title"]   
+        print(url,title)
+        return([url, title])
 
 
     def type(self,url):
@@ -50,7 +59,7 @@ class Bot:
             if len(self.que) >= 1:
             
                 self.que.pop(0)		
-                vc.play(discord.FFmpegPCMAudio(source=source, **FFMPEG_OPTIONS), after=lambda e: self.play_next(ctx,self.que[0]))
+                vc.play(discord.FFmpegPCMAudio(source=source[0], **FFMPEG_OPTIONS), after=lambda e: self.play_next(ctx,self.que[0]))
 
             else:             
                 ctx.message.channel.send("End of Que")
@@ -67,7 +76,7 @@ class Bot:
     def show_que(self):
         message = ""
         for i in range(len(self.que)):
-            message += f"{i}. {self.que[i].title} \n"
+            message += f"{i}. {self.que[i][1]} \n"
         return message
 
     def methods(self):
@@ -78,28 +87,26 @@ class Bot:
         async def play(ctx,url):
             
             
-            if self.type(url) == "spotify":
-                audio = Spotify_API(url)
+            #if self.type(url) == "spotify":
+            #    audio = Spotify_API(url)
+        
+            audio = self.get_src(url)
+            self.que.append(audio)
+
+            if len(self.que)>=1:
+                await ctx.message.channel.send(f"Added to que: {url} ")
+                await ctx.message.channel.send(self.show_que())
+
+            chann = ctx.author.voice.channel
+            client = ctx.message.guild.voice_client
+
+            if client == None:
+                client = await chann.connect(timeout=1)
+                print(f"new-Client: {client}")
+                self.que.clear()
             
-            
-            else:
-                audio = self.get_src(url)
-                self.que.append(audio)
-
-                if len(self.que)>1:
-                    await ctx.message.channel.send(f"Added to que: {url} ")
-                    await ctx.message.channel.send(self.show_que())
-
-                chann = ctx.author.voice.channel
-                client = ctx.message.guild.voice_client
-
-                if client == None:
-                    client = await chann.connect(timeout=1)
-                    print(f"new-Client: {client}")
-                    self.que.clear()
-                
-                if not client.is_playing():
-                    client.play(discord.FFmpegPCMAudio(source=audio, **FFMPEG_OPTIONS), after=lambda e: self.play_next(ctx,url)) 
+            if not client.is_playing():
+                client.play(discord.FFmpegPCMAudio(source=audio[0], **FFMPEG_OPTIONS), after=lambda e: self.play_next(ctx=ctx,source=audio)) 
 
 
 
